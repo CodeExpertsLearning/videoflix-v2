@@ -24,6 +24,26 @@ Route::prefix('media')->name('media.')->middleware('auth')->group(function () {
         '/contents',
         \App\Http\Controllers\Media\ContentController::class
     );
+
+    Route::get(
+        '/contents/{content}/videos/upload',
+        [\App\Http\Controllers\Media\VideoController::class, 'upload']
+    )
+        ->name('contents.videos.upload');
+
+    Route::post(
+        '/contents/{content}/videos',
+        [\App\Http\Controllers\Media\VideoController::class, 'store']
+    )
+        ->name('contents.videos.store');
+
+    Route::post('/contents/{content}/videos/{video}/process', [\App\Http\Controllers\Media\VideoController::class, 'process'])
+        ->name('contents.videos.upload.process');
+    Route::delete('/videos/{video}', [\App\Http\Controllers\Media\VideoController::class, 'destroy'])
+        ->name('contents.videos.destroy');
+
+    Route::match(['PUT', 'PATCH'], '/contents/{content}/videos/{video}', [\App\Http\Controllers\Media\VideoController::class, 'update'])
+        ->name('contents.videos.update');
 });
 
 
