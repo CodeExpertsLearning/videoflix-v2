@@ -28,6 +28,16 @@ class Content extends Model
             ->saveSlugsTo('slug');
     }
 
+    /**
+     * Scopes
+     */
+    public function scopeActiveVideos($query)
+    {
+        return $this->videos()
+            ->whereNotNull('code')
+            ->whereisProcessed(true);
+    }
+
     public function videos(): HasMany
     {
         return $this->hasMany(Video::class);

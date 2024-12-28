@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\Content;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -14,8 +15,13 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+Route::get('/dashboard', function (Content $content) {
+
+    $contents = $content->whereHas('videos', fn($query) => $query->whereNotNull('code')
+        ->whereisProcessed(true))
+        ->get()->groupBy('type');
+
+    return inertia('Dashboard', compact('contents'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
@@ -52,5 +58,26 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+
+Route::get('/watch/{content:slug}', \App\Http\Controllers\Actions\PlayerAction::class)
+    ->middleware(['auth'])
+    ->name('video.player');
+
+
+Route::get('resources/{code}/{video}', function ($code, $video = null) {
+    $video = $code . '/' . $video;
+
+    return \Illuminate\Support\Facades\Storage::disk('videos_processed')
+        ->response(
+            $video,
+            null,
+            [
+                'Content-Type' => 'application/x-mpegURL',
+                'isHls' => true
+            ]
+        );
+})->name('stream_player')->middleware(['auth']);
+
 
 require __DIR__ . '/auth.php';

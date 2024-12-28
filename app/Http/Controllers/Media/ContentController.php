@@ -60,7 +60,7 @@ class ContentController extends Controller
      */
     public function edit(string $id)
     {
-        $content = $this->contentModel->findOrFail($id);
+        $content = $this->contentModel->with('videos')->findOrFail($id);
 
         return inertia('Media/ContentEdit', compact('content'));
     }
@@ -74,11 +74,11 @@ class ContentController extends Controller
 
         $content = $this->contentModel->findOrFail($id);
 
-        if (isset($data['cover']) && $data['cover'] instanceof UploadedFile) {
+        if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
             if ($content->cover)
                 Storage::disk('public')->delete($content->cover);
 
-            $data['cover'] = $data['cover']->store('media/contents', 'public');
+            $data['cover'] = $data['photo']->store('media/contents', 'public');
         }
 
         $content->update($data);

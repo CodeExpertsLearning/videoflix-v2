@@ -1,6 +1,6 @@
 <script setup>
 import { Head, router, usePage } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { createUpload } from "@mux/upchunk";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -11,6 +11,38 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/VideoFlix/TextInput.vue";
 import NavLink from "@/Components/NavLink.vue";
+
+onMounted(() => {
+    Echo.channel("videos")
+        .listen(".App\\Events\\VideoThumbCreated", (e) => {
+            const video = getVideoById(e.videoId);
+            console.log(e, video);
+            if (!video) return;
+
+            video.thumb = e.thumb;
+        })
+        .listen(".App\\Events\\VideoEncodingStarted", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            video.encoding = true;
+        })
+        .listen(".App\\Events\\VideoEncodingProgress", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            video.encodingProgress = e.percentage;
+        })
+        .listen(".App\\Events\\VideoEncodingFinished", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            video.encoding = false;
+        });
+});
 
 defineProps({
     content: {},

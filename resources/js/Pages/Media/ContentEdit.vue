@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage, router } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { ref, reactive, onMounted } from "vue";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import TextInput from "@/Components/VideoFlix/TextInput.vue";
@@ -9,8 +9,49 @@ import Select from "@/Components/VideoFlix/Select.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
+import NavLink from "@/Components/NavLink.vue";
+
+onMounted(() => {
+    Echo.channel("videos")
+        .listen(".App\\Events\\VideoThumbCreated", (e) => {
+            const video = getVideoById(e.videoId);
+            console.log(e, video);
+            if (!video) return;
+
+            video.thumb = e.thumb;
+        })
+        .listen(".App\\Events\\VideoEncodingStarted", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            video.encoding = true;
+        })
+        .listen(".App\\Events\\VideoEncodingProgress", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            if (!video.encoding) video.encoding = true;
+
+            video.encodingProgress = e.percentage;
+        })
+        .listen(".App\\Events\\VideoEncodingFinished", (e) => {
+            const video = getVideoById(e.videoId);
+
+            if (!video) return;
+
+            video.encoding = false;
+        });
+});
 
 defineProps({ content: {} });
+
+const videos = reactive(usePage().props.content.videos);
+
+const getVideoById = (id) => {
+    return videos.find((video) => video.id == id);
+};
 
 const isDragged = ref(false);
 const filesFront = ref([]);
@@ -26,14 +67,14 @@ const imagesHandle = (e) => {
 };
 
 const resetFilesProp = () => {
-    form.cover = [];
+    form.photo = [];
     filesFront.value = [];
 };
 
 const mainHandleImages = (target) => {
     let images = target;
 
-    form.cover = images.length ? images[0] : [];
+    form.photo = images.length ? images[0] : [];
 
     mountFilesFront(images);
 };
@@ -64,7 +105,7 @@ const submit = () => {
         description: form.description,
         body: form.body,
         type: form.type,
-        cover: form.cover,
+        photo: form.photo,
     };
 
     router.post(route("media.contents.update", form.id), data);
@@ -84,6 +125,14 @@ const submit = () => {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <div class="w-full py-4 flex justify-end">
+                    <NavLink
+                        :href="route('media.contents.videos.upload', content)"
+                        class="px-6 !py-3 border border-green-900 bg-green-600 !text-white hover:bg-green-900 transition duration-300 ease-in-out rounded"
+                    >
+                        Realizar Upload Vídeo(s)
+                    </NavLink>
+                </div>
                 <div
                     class="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800"
                 >
@@ -256,6 +305,58 @@ const submit = () => {
                                     </div>
                                 </form>
                             </div>
+
+                            <!-- Componentizar trecho abaixo-->
+                            <div
+                                v-if="videos.length"
+                                class="p-7 mt-10 pt-10 border-t border-gray-500 grid grid-cols-4 gap-3"
+                            >
+                                <div
+                                    class="w-[230px]"
+                                    v-for="video of videos"
+                                    :key="video.id"
+                                >
+                                    <img
+                                        v-if="video.thumb"
+                                        :src="`/storage/${video.thumb}`"
+                                        :alt="`Capa vídeo ${video.name}`"
+                                        class="p-1 bg-white rounded shadow-xl mb-4"
+                                    />
+                                    <img
+                                        v-if="!video.thumb"
+                                        :src="`/storage/no-photo.jpg`"
+                                        :alt="`Capa vídeo ${video.name}`"
+                                        class="p-1 bg-white rounded shadow-xl mb-4"
+                                    />
+                                    <h2
+                                        class="font-white font-bold text-xl mb-4 text-clip overflow-hidden"
+                                    >
+                                        {{ video.name }}
+                                    </h2>
+
+                                    <div
+                                        class="space-y-1"
+                                        v-if="video.encoding"
+                                    >
+                                        <div
+                                            class="bg-gray-100 shadow-inner h-3 rounded overflow-hidden"
+                                        >
+                                            <div
+                                                class="bg-green-500 h-full"
+                                                v-bind:style="{
+                                                    width: `${video.encodingProgress}%`,
+                                                }"
+                                            ></div>
+                                        </div>
+                                        <div
+                                            class="text-sm text-white font-bold"
+                                        >
+                                            Convertendo vídeo
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Fim trecho Componentizar -->
                         </div>
                     </div>
                 </div>
